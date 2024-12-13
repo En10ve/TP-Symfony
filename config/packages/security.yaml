@@ -1,39 +1,43 @@
 security:
-    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
-    password_hashers:
-        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
-    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
+    # Providers pour la gestion des utilisateurs
     providers:
-        users_in_memory: { memory: null }
+        app_user_provider:
+            entity:
+                class: App\Entity\User  # La classe de l'entité
+                property: email  # La propriété utilisée pour l'identification (ici email)
+
+    # Configuration des hachages de mots de passe (utilisation de bcrypt)
+    password_hashers:
+        App\Entity\User:
+            algorithm: bcrypt
+
     firewalls:
-        dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
-            security: false
+        # Firewall de la page de connexion
+        login:
+            pattern: ^/login
+            security: false  # Pas de sécurité sur la page de login
+
+        # Firewall principal
         main:
-            lazy: true
-            provider: users_in_memory
+            # Utilisation de l'authentification par formulaire
+            form_login:
+                login_path: app_login  # URL de la page de connexion
+                check_path: app_login  # URL de soumission du formulaire
+                username_parameter: email  # Paramètre du nom d'utilisateur
+                password_parameter: password  # Paramètre du mot de passe
+                enable_csrf: true  # Activation de la protection CSRF pour le formulaire
 
-            # activate different ways to authenticate
-            # https://symfony.com/doc/current/security.html#the-firewall
+            # Déconnexion
+            logout:
+                path: app_logout
+                target: /
 
-            # https://symfony.com/doc/current/security/impersonating_user.html
-            # switch_user: true
+            # Gestion des utilisateurs anonymes : plus besoin de 'anonymous' ici
+            stateless: false  # Si vous souhaitez utiliser des sessions (généralement ce sera le cas)
 
-    # Easy way to control access for large sections of your site
-    # Note: Only the *first* access control that matches will be used
+    # Configuration des règles d'accès aux pages
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
-
-when@test:
-    security:
-        password_hashers:
-            # By default, password hashers are resource intensive and take time. This is
-            # important to generate secure password hashes. In tests however, secure hashes
-            # are not important, waste resources and increase test times. The following
-            # reduces the work factor to the lowest possible values.
-            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
-                algorithm: auto
-                cost: 4 # Lowest possible value for bcrypt
-                time_cost: 3 # Lowest possible value for argon
-                memory_cost: 10 # Lowest possible value for argon
+        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/reservation, roles: ROLE_USER }
+        - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }  # Permet aux utilisateurs non authentifiés d'accéder à la page de login
